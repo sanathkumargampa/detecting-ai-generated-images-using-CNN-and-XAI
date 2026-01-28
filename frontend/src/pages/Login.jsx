@@ -29,7 +29,14 @@ const Login = () => {
                 setError('Invalid credentials');
             }
         } catch (err) {
-            setError('Login failed. Please try again.');
+            if (err.response && err.response.status === 401) {
+                setError('Invalid username or password');
+            } else if (err.code === 'ERR_NETWORK') {
+                setError('Cannot connect to server. Please ensure backend is running.');
+            } else {
+                setError('Login failed. Please try again.');
+                console.error('Login error:', err);
+            }
         } finally {
             setLoading(false);
         }
