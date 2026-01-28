@@ -38,7 +38,8 @@ export default function Dashboard() {
             // Simulate stage transitions with slightly longer times for better feel
             setTimeout(() => setAnalysisStage('generating'), 2000);
 
-            const response = await axios.post('http://127.0.0.1:8000/api/predict', formData, {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+            const response = await axios.post(`${apiUrl}/predict`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
