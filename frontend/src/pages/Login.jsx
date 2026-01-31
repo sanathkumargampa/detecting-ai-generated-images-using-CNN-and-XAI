@@ -2,353 +2,356 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const Login = () => {
-    const navigate = useNavigate();
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+export default function Login() {
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [isForgotPassword, setIsForgotPassword] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        mobile: '' // Not used in backend yet, but per requirements
+    });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [focusedField, setFocusedField] = useState(null);
-    const [isButtonHovered, setIsButtonHovered] = useState(false);
-    const [isButtonPressed, setIsButtonPressed] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const navigate = useNavigate();
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const toggleMode = () => {
+        setIsRegistering(!isRegistering);
+        setIsForgotPassword(false);
+        setError('');
+        setFormData({
+            name: '', username: '', email: '', password: '', confirmPassword: '', mobile: ''
+        });
+    };
+
+    const toggleForgotPassword = () => {
+        setIsForgotPassword(!isForgotPassword);
+        setIsRegistering(false);
+        setError('');
+        setFormData({
+            name: '', username: '', email: '', password: '', confirmPassword: '', mobile: ''
+        });
+    };
+
+    const validate = () => {
+        if (isForgotPassword) {
+            if (!formData.email) return "Email is required";
+            if (!formData.password) return "New password is required";
+            if (formData.password.length < 6) return "Password must be at least 6 characters";
+            return null;
+        }
+        if (!formData.password) return "Password is required";
+        if (isRegistering) {
+            if (!formData.name) return "Name is required";
+            if (!formData.username) return "Username is required";
+            if (!formData.email) return "Email is required";
+            if (formData.password !== formData.confirmPassword) return "Passwords do not match";
+            if (formData.password.length < 6) return "Password must be at least 6 characters";
+        } else {
+            if (!formData.username) return "Username or Email is required";
+        }
+        return null;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const err = validate();
+        if (err) {
+            setError(err);
+            return;
+        }
+
         setLoading(true);
         setError('');
 
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+        const endpoint = isForgotPassword ? '/reset-password' : (isRegistering ? '/register' : '/login');
+
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
-            const response = await axios.post(`${apiUrl}/login`, {
-                username,
-                password,
-            });
+            const response = await axios.post(`${apiUrl}${endpoint}`, formData, { withCredentials: true });
             if (response.data.success) {
-                navigate('/dashboard');
+                if (isForgotPassword) {
+                    setIsForgotPassword(false);
+                    alert("Password reset successful! Please log in with your new password.");
+                } else if (isRegistering) {
+                    setIsRegistering(false);
+                    alert("Registration successful! Please log in.");
+                } else {
+                    localStorage.setItem('token', 'true'); // Simple session marker
+                    localStorage.setItem('username', response.data.username);
+                    localStorage.setItem('user_id', response.data.user_id);
+                    localStorage.setItem('is_superuser', response.data.is_superuser);
+
+                    if (response.data.is_superuser) {
+                        navigate('/admin');
+                    } else {
+                        navigate('/dashboard');
+                    }
+                }
             } else {
-                setError('Invalid credentials');
+                setError(response.data.message);
             }
         } catch (err) {
-            if (err.response && err.response.status === 401) {
-                setError('Invalid username or password');
-            } else if (err.code === 'ERR_NETWORK') {
-                setError('Cannot connect to server. Please ensure backend is running.');
-            } else {
-                setError('Login failed. Please try again.');
-                console.error('Login error:', err);
-            }
+            setError(err.response?.data?.message || "An error occurred. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
-    // Button dynamic styles
-    const getButtonStyle = () => {
-        const baseStyle = {
-            width: '100%',
-            padding: '18px 20px',
-            background: '#4f8fff',
-            border: 'none',
-            borderRadius: '12px',
-            color: '#ffffff',
-            fontSize: '15px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+    // Styles (reusing some from Dashboard/Landing for consistency)
+    const styles = {
+        container: {
+            minHeight: '100vh',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '10px',
-            boxShadow: '0 4px 24px -4px rgba(79, 143, 255, 0.4)',
-            transform: 'translateY(0) scale(1)'
-        };
-
-        if (loading) {
-            return {
-                ...baseStyle,
-                background: '#3b6fd9',
-                cursor: 'not-allowed',
-                opacity: 0.7,
-                boxShadow: 'none'
-            };
+            background: 'linear-gradient(180deg, #0a0a0c 0%, #111114 100%)',
+            fontFamily: "'Inter', sans-serif",
+            color: '#e0e0e8'
+        },
+        card: {
+            width: '100%',
+            maxWidth: '420px',
+            padding: '40px',
+            background: '#16161a',
+            borderRadius: '24px',
+            border: '1px solid rgba(255,255,255,0.05)',
+            boxShadow: '0 32px 80px -24px rgba(0,0,0,0.8)'
+        },
+        title: {
+            fontSize: '24px',
+            fontWeight: '600',
+            marginBottom: '8px',
+            textAlign: 'center',
+            color: '#fff'
+        },
+        subtitle: {
+            fontSize: '14px',
+            color: '#a0a0ab',
+            marginBottom: '32px',
+            textAlign: 'center'
+        },
+        inputGroup: {
+            marginBottom: '20px'
+        },
+        input: {
+            width: '100%',
+            padding: '14px 16px',
+            background: '#0d0d10',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '12px',
+            color: '#fff',
+            fontSize: '14px',
+            outline: 'none',
+            transition: 'border-color 0.2s',
+            boxSizing: 'border-box' // Fix padding issue
+        },
+        button: {
+            width: '100%',
+            padding: '14px',
+            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            border: 'none',
+            borderRadius: '12px',
+            color: '#fff',
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            marginTop: '10px',
+            opacity: loading ? 0.7 : 1
+        },
+        toggleText: {
+            marginTop: '24px',
+            textAlign: 'center',
+            fontSize: '14px',
+            color: '#888890'
+        },
+        link: {
+            color: '#6ba3ff',
+            cursor: 'pointer',
+            marginLeft: '5px',
+            fontWeight: '500'
+        },
+        error: {
+            color: '#f87171',
+            fontSize: '13px',
+            marginBottom: '20px',
+            textAlign: 'center',
+            background: 'rgba(239, 68, 68, 0.1)',
+            padding: '10px',
+            borderRadius: '8px'
         }
-
-        if (isButtonPressed) {
-            return {
-                ...baseStyle,
-                transform: 'translateY(1px) scale(0.98)',
-                boxShadow: '0 2px 12px -2px rgba(79, 143, 255, 0.3)'
-            };
-        }
-
-        if (isButtonHovered) {
-            return {
-                ...baseStyle,
-                background: '#5a9aff',
-                transform: 'translateY(-2px) scale(1.01)',
-                boxShadow: '0 8px 32px -4px rgba(79, 143, 255, 0.5)'
-            };
-        }
-
-        return baseStyle;
     };
 
     return (
-        <div
-            style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '24px',
-                background: 'linear-gradient(145deg, #08080a 0%, #0f0f12 50%, #08080a 100%)'
-            }}
-        >
-            {/* Login Card */}
-            <div
-                style={{
-                    width: '100%',
-                    maxWidth: '460px',
-                    background: 'linear-gradient(165deg, #1a1a20 0%, #141418 100%)',
-                    borderRadius: '24px',
-                    padding: '48px 44px',
-                    boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.03), 0 24px 80px -16px rgba(0, 0, 0, 0.8), 0 0 60px -20px rgba(79, 143, 255, 0.06)'
-                }}
-            >
-                {/* Product Branding */}
-                <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-                    <p
-                        style={{
-                            color: '#d0d0d8',
-                            fontSize: '36px',
-                            fontWeight: '600',
-                            letterSpacing: '-0.01em',
-                            margin: 0,
-                            lineHeight: '1.4'
-                        }}
-                    >
-                        Veri<span style={{ color: '#6ba3ff' }}>AI</span>
-                    </p>
-                    <p
-                        style={{
-                            color: 'rgba(148, 148, 160, 0.4)',
-                            fontSize: '13px',
-                            fontWeight: '400',
-                            letterSpacing: '0.08em',
-                            margin: '10px 0 0 0',
-                            textTransform: 'uppercase'
-                        }}
-                    >
-                        AI Image Authentication
-                    </p>
-                </div>
+        <div style={styles.container}>
+            <div style={styles.card}>
+                <h1 style={styles.title}>
+                    {isForgotPassword ? 'Reset Password' : (isRegistering ? 'Create Account' : 'Welcome Back')}
+                </h1>
+                <p style={styles.subtitle}>
+                    {isForgotPassword ? 'Enter your email and new password' : (isRegistering ? 'Join VeriAI to analyze images' : 'Log in to continue to VeriAI')}
+                </p>
 
-                {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                    <p
-                        style={{
-                            color: 'rgba(140, 140, 152, 0.45)',
-                            fontSize: '10px',
-                            fontWeight: '500',
-                            letterSpacing: '0.3em',
-                            textTransform: 'uppercase',
-                            marginBottom: '12px'
-                        }}
-                    >
-                        Welcome Back
-                    </p>
-                    <h1
-                        style={{
-                            color: '#eaeaef',
-                            fontSize: '22px',
-                            fontWeight: '600',
-                            letterSpacing: '-0.02em',
-                            margin: 0,
-                            lineHeight: '1.3'
-                        }}
-                    >
-                        Log into your account
-                    </h1>
-                </div>
+                {error && <div style={styles.error}>{error}</div>}
 
                 <form onSubmit={handleSubmit}>
-                    {/* Email/Username Field */}
-                    <div style={{ marginBottom: '24px' }}>
-                        <label
-                            style={{
-                                display: 'block',
-                                color: 'rgba(160, 160, 172, 0.65)',
-                                fontSize: '13px',
-                                fontWeight: '400',
-                                marginBottom: '10px',
-                                letterSpacing: '0.02em'
-                            }}
-                        >
-                            Email or Username
-                        </label>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            onFocus={() => setFocusedField('username')}
-                            onBlur={() => setFocusedField(null)}
-                            placeholder="Enter your email or username"
-                            required
-                            style={{
-                                width: '100%',
-                                padding: '16px 18px',
-                                background: focusedField === 'username' ? '#222228' : '#1c1c22',
-                                border: 'none',
-                                borderRadius: '12px',
-                                color: '#f0f0f4',
-                                fontSize: '15px',
-                                outline: 'none',
-                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                boxShadow: focusedField === 'username'
-                                    ? '0 0 0 2px rgba(79, 143, 255, 0.35), 0 0 24px -4px rgba(79, 143, 255, 0.15)'
-                                    : 'inset 0 1px 2px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.02)',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    {/* Password Field */}
-                    <div style={{ marginBottom: '32px' }}>
-                        <label
-                            style={{
-                                display: 'block',
-                                color: 'rgba(160, 160, 172, 0.65)',
-                                fontSize: '13px',
-                                fontWeight: '400',
-                                marginBottom: '10px',
-                                letterSpacing: '0.02em'
-                            }}
-                        >
-                            Password
-                        </label>
-                        <div style={{ position: 'relative' }}>
+                    {isForgotPassword ? (
+                        <div style={styles.inputGroup}>
                             <input
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                onFocus={() => setFocusedField('password')}
-                                onBlur={() => setFocusedField(null)}
-                                placeholder="Enter your password"
+                                type="email"
+                                name="email"
+                                placeholder="Email Address"
+                                value={formData.email}
+                                onChange={handleChange}
+                                style={styles.input}
                                 required
-                                style={{
-                                    width: '100%',
-                                    padding: '16px 52px 16px 18px',
-                                    background: focusedField === 'password' ? '#222228' : '#1c1c22',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    color: '#f0f0f4',
-                                    fontSize: '15px',
-                                    outline: 'none',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    boxShadow: focusedField === 'password'
-                                        ? '0 0 0 2px rgba(79, 143, 255, 0.35), 0 0 24px -4px rgba(79, 143, 255, 0.15)'
-                                        : 'inset 0 1px 2px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.02)',
-                                    boxSizing: 'border-box'
-                                }}
                             />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                style={{
-                                    position: 'absolute',
-                                    right: '16px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: '4px',
-                                    cursor: 'pointer',
-                                    color: '#5a5a68',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'color 0.2s ease',
-                                    opacity: 0.7
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = '#8888a0'; e.currentTarget.style.opacity = '1'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.color = '#5a5a68'; e.currentTarget.style.opacity = '0.7'; }}
-                            >
-                                {showPassword ? (
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                                        <line x1="1" y1="1" x2="23" y2="23" />
-                                    </svg>
-                                ) : (
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                        <circle cx="12" cy="12" r="3" />
-                                    </svg>
-                                )}
-                            </button>
                         </div>
-                    </div>
-
-                    {/* Error Message */}
-                    {error && (
-                        <div
-                            style={{
-                                padding: '14px 18px',
-                                background: 'rgba(239, 68, 68, 0.06)',
-                                borderRadius: '10px',
-                                color: 'rgba(248, 113, 113, 0.85)',
-                                fontSize: '13px',
-                                textAlign: 'center',
-                                marginBottom: '24px'
-                            }}
-                        >
-                            {error}
+                    ) : (
+                        <div style={styles.inputGroup}>
+                            <input
+                                type="text"
+                                name="username"
+                                placeholder={isRegistering ? "Username" : "Username or Email"}
+                                value={formData.username}
+                                onChange={handleChange}
+                                style={styles.input}
+                                required
+                            />
                         </div>
                     )}
 
-                    {/* Login Button */}
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        style={getButtonStyle()}
-                        onMouseEnter={() => !loading && setIsButtonHovered(true)}
-                        onMouseLeave={() => { setIsButtonHovered(false); setIsButtonPressed(false); }}
-                        onMouseDown={() => !loading && setIsButtonPressed(true)}
-                        onMouseUp={() => setIsButtonPressed(false)}
-                    >
-                        {loading ? (
-                            <>
-                                <svg
-                                    style={{ animation: 'spin 1s linear infinite' }}
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
+                    {isRegistering && (
+                        <>
+                            <div style={styles.inputGroup}>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    placeholder="Full Name"
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    style={styles.input}
+                                    required
+                                />
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="Email Address"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    style={styles.input}
+                                    required
+                                />
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <input
+                                    type="text"
+                                    name="mobile"
+                                    placeholder="Mobile Number"
+                                    value={formData.mobile}
+                                    onChange={handleChange}
+                                    style={styles.input}
+                                // Mobile is optional in backend for now but required in UI
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    <div style={styles.inputGroup}>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                name="password"
+                                placeholder={isForgotPassword ? 'New Password' : 'Password'}
+                                value={formData.password}
+                                onChange={handleChange}
+                                style={{ ...styles.input, paddingRight: '45px' }}
+                                required
+                            />
+                            <span
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '14px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    cursor: 'pointer',
+                                    color: '#888',
+                                    fontSize: '13px',
+                                    userSelect: 'none'
+                                }}
+                            >
+                                {showPassword ? '🙈' : '👁️'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {isRegistering && (
+                        <div style={styles.inputGroup}>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    name="confirmPassword"
+                                    placeholder="Confirm Password"
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    style={{ ...styles.input, paddingRight: '45px' }}
+                                    required
+                                />
+                                <span
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '14px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        cursor: 'pointer',
+                                        color: '#888',
+                                        fontSize: '13px',
+                                        userSelect: 'none'
+                                    }}
                                 >
-                                    <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                    <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                </svg>
-                                <span>Signing in...</span>
-                            </>
-                        ) : (
-                            <span>Sign In</span>
-                        )}
+                                    {showConfirmPassword ? '🙈' : '👁️'}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    <button type="submit" style={styles.button} disabled={loading}>
+                        {loading ? 'Please wait...' : (isForgotPassword ? 'Reset Password' : (isRegistering ? 'Register' : 'Login'))}
                     </button>
                 </form>
-            </div>
 
-            {/* CSS Animation for spinner */}
-            <style>{`
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                input::placeholder {
-                    color: rgba(100, 100, 112, 0.6) !important;
-                }
-            `}</style>
+                {!isRegistering && !isForgotPassword && (
+                    <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                        <span style={styles.link} onClick={toggleForgotPassword}>Forgot Password?</span>
+                    </div>
+                )}
+
+                {isForgotPassword ? (
+                    <div style={styles.toggleText}>
+                        Remember your password?
+                        <span style={styles.link} onClick={toggleForgotPassword}>Back to Login</span>
+                    </div>
+                ) : (
+                    <div style={styles.toggleText}>
+                        {isRegistering ? 'Already have an account?' : "Don't have an account?"}
+                        <span style={styles.link} onClick={toggleMode}>
+                            {isRegistering ? 'Login' : 'Register'}
+                        </span>
+                    </div>
+                )}
+            </div>
         </div>
     );
-};
-
-export default Login;
+}

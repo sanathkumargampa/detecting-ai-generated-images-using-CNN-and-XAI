@@ -1,31 +1,31 @@
-from django.shortcuts import render
-from django.template import RequestContext
-from django.contrib import messages
-from django.http import HttpResponse
-from django.conf import settings
 import os
-from django.core.files.storage import FileSystemStorage
-import pickle
-import os
-from keras.models import Sequential, load_model, Model
-from keras.layers import AveragePooling2D, Dropout, Flatten, Dense, Input, Activation
-from keras.optimizers import Adam
-from keras.layers import  MaxPooling2D
-from keras.layers import Convolution2D
-from lime import lime_image
-from skimage.segmentation import mark_boundaries
-import matplotlib
-matplotlib.use('Agg')  # Use non-GUI backend to fix threading issues
-import matplotlib.pyplot as plt
-import cv2
-import numpy as np
 import io
 import base64
+import json
+import uuid
+import random
+import hashlib
+
+import cv2
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Use non-GUI backend for threading
+import matplotlib.pyplot as plt
+
+from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-import json
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.db.models import Avg
 
-global username
+from keras.models import load_model, Model
+from lime import lime_image
+from skimage.segmentation import mark_boundaries
+
+from .models import AnalysisLog
+
+# Initialize LIME explainer
 explainer = lime_image.LimeImageExplainer()
 
 #get Grad Cam Image
@@ -43,7 +43,6 @@ def getGradCam(img, model):
 # If Real confidence is below this threshold, classify as Fake
 AI_FAKE_THRESHOLD = 0.50  # 50% - standard classification (whichever class is higher wins)
 
-import random
 
 # Dynamic explanation templates based on classification
 FAKE_EXPLANATIONS = [
@@ -166,62 +165,279 @@ def classifyImage(image_path, nasnet_model):
         'status': status,
         'is_real': is_real,
         'confidence': confidence,
+        'real_prob': real_prob * 100,  # Return as percentage
+        'fake_prob': fake_prob * 100,  # Return as percentage
         'explanation': text_explanation
     }
 
-def SingleImage(request):
-    if request.method == 'GET':
-       return render(request, 'SingleImage.html', {})
-
-def SingleImageAction(request):
-    if request.method == 'POST':
-        global uname, labels
-        filename = request.FILES['t1'].name
-        image = request.FILES['t1'].read() #reading uploaded file from user
-        if os.path.exists("DetectionApp/static/"+filename):
-            os.remove("DetectionApp/static/"+filename)
-        with open("DetectionApp/static/"+filename, "wb") as file:
-            file.write(image)
-        file.close()
-        model = load_model("model/nasnet_weights.hdf5")
-        img_b64 = classifyImage("DetectionApp/static/"+filename, model)
-        context= {'data':"Detection Output", 'img': img_b64}
-        return render(request, 'UserScreen.html', context)   
-
-def UserLoginAction(request):
-    if request.method == 'POST':
-        global username
-        username = request.POST.get('t1', False)
-        password = request.POST.get('t2', False)
-        if username == 'admin' and password == 'admin':
-            context= {'data':'Welcome '+username}
-            return render(request, "UserScreen.html", context)
-        else:
-            context= {'data':'Invalid username'}
-            return render(request, 'UserLogin.html', context)
-
-def UserLogin(request):
-    if request.method == 'GET':
-       return render(request, 'UserLogin.html', {})
-
+# Legacy index view - redirects to React frontend
 def index(request):
-    if request.method == 'GET':
-       return render(request, 'index.html', {})
+    return render(request, 'index.html', {})
+
+@csrf_exempt
+def register_api(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            name = data.get('name', '')
+            username = data.get('username')
+            password = data.get('password')
+            email = data.get('email')
+            
+            if User.objects.filter(username=username).exists():
+                 return JsonResponse({'success': False, 'message': 'Username already exists'}, status=400)
+            
+            if User.objects.filter(email=email).exists():
+                 return JsonResponse({'success': False, 'message': 'Email already exists'}, status=400)
+            
+            user = User.objects.create_user(username=username, email=email, password=password)
+            user.first_name = name
+            user.save()
+            return JsonResponse({'success': True, 'message': 'Registration successful'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
 
 @csrf_exempt
 def login_api(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            username = data.get('username')
+            identifier = data.get('username')  # Can be username or email
             password = data.get('password')
             
-            if username == 'admin' and password == 'admin':
-                return JsonResponse({'success': True, 'message': 'Login successful'})
+            # Try to find user by email first, then by username
+            user = None
+            if '@' in identifier:
+                try:
+                    user_obj = User.objects.get(email=identifier)
+                    user = authenticate(request, username=user_obj.username, password=password)
+                except User.DoesNotExist:
+                    pass
+            else:
+                user = authenticate(request, username=identifier, password=password)
+            
+            if user is not None:
+                login(request, user)
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Login successful',
+                    'username': user.username,
+                    'user_id': user.id,
+                    'is_superuser': user.is_superuser
+                })
             else:
                 return JsonResponse({'success': False, 'message': 'Invalid credentials'}, status=401)
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def logout_api(request):
+    if request.method == 'POST':
+        logout(request)
+        return JsonResponse({'success': True, 'message': 'Logout successful'})
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def reset_password_api(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+            new_password = data.get('password')
+            
+            if not email or not new_password:
+                return JsonResponse({'success': False, 'message': 'Email and password are required'}, status=400)
+            
+            try:
+                user = User.objects.get(email=email)
+                user.set_password(new_password)
+                user.save()
+                return JsonResponse({'success': True, 'message': 'Password reset successful'})
+            except User.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'No account found with this email'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def history_api(request):
+    user = None
+    
+    # Try session auth first
+    if request.user.is_authenticated:
+        user = request.user
+    else:
+        # Fallback to X-User-ID header
+        user_id = request.headers.get('X-User-ID')
+        if user_id:
+            try:
+                user = User.objects.get(id=int(user_id))
+            except (User.DoesNotExist, ValueError):
+                pass
+    
+    if user:
+        logs = AnalysisLog.objects.filter(user=user).order_by('-timestamp')
+        data = []
+        for log in logs:
+            data.append({
+                'image_path': log.image_path,
+                'is_real': log.is_real,
+                'confidence': log.confidence,
+                'real_prob': log.real_prob,
+                'fake_prob': log.fake_prob,
+                'explanation_image': log.explanation_image or '',
+                'explanation_text': log.explanation_text or '',
+                'timestamp': log.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            })
+        return JsonResponse({'success': True, 'history': data})
+    return JsonResponse({'success': False, 'message': 'Not authenticated'}, status=401)
+
+@csrf_exempt
+def admin_logs_api(request):
+    # Check for X-User-ID header for admin verification
+    user = None
+    if request.user.is_authenticated:
+        user = request.user
+    else:
+        user_id = request.headers.get('X-User-ID')
+        if user_id:
+            try:
+                user = User.objects.get(id=int(user_id))
+            except (User.DoesNotExist, ValueError):
+                pass
+    
+    if user and user.is_superuser:
+        # Get all logs with explanation data
+        logs = AnalysisLog.objects.all().order_by('-timestamp')
+        logs_data = []
+        for log in logs:
+            logs_data.append({
+                'id': log.id,
+                'username': log.user.username,
+                'email': log.user.email,
+                'image_path': log.image_path,
+                'is_real': log.is_real,
+                'confidence': log.confidence,
+                'real_prob': log.real_prob,
+                'fake_prob': log.fake_prob,
+                'explanation_image': log.explanation_image or '',
+                'explanation_text': log.explanation_text or '',
+                'timestamp': log.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            })
+        
+        # Get all users with their analysis stats
+        from django.db.models import Count, Avg
+        users = User.objects.all()
+        users_data = []
+        for u in users:
+            user_logs = AnalysisLog.objects.filter(user=u)
+            real_count = user_logs.filter(is_real=True).count()
+            fake_count = user_logs.filter(is_real=False).count()
+            avg_confidence = user_logs.aggregate(Avg('confidence'))['confidence__avg'] or 0
+            
+            users_data.append({
+                'id': u.id,
+                'username': u.username,
+                'email': u.email or 'N/A',
+                'first_name': u.first_name or '',
+                'is_superuser': u.is_superuser,
+                'date_joined': u.date_joined.strftime("%Y-%m-%d %H:%M"),
+                'last_login': u.last_login.strftime("%Y-%m-%d %H:%M") if u.last_login else 'Never',
+                'total_analyses': user_logs.count(),
+                'real_count': real_count,
+                'fake_count': fake_count,
+                'avg_confidence': round(avg_confidence, 1)
+            })
+        
+        return JsonResponse({'success': True, 'logs': logs_data, 'users': users_data})
+    return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+
+@csrf_exempt
+def admin_user_api(request, user_id):
+    """Admin API to update or delete a user"""
+    # Verify admin access
+    admin = None
+    if request.user.is_authenticated:
+        admin = request.user
+    else:
+        admin_id = request.headers.get('X-User-ID')
+        if admin_id:
+            try:
+                admin = User.objects.get(id=int(admin_id))
+            except (User.DoesNotExist, ValueError):
+                pass
+    
+    if not admin or not admin.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+    
+    # Get target user
+    try:
+        target_user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'User not found'}, status=404)
+    
+    # Handle PUT (update user)
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            
+            # Update allowed fields
+            if 'username' in data and data['username']:
+                # Check if username already exists (excluding current user)
+                if User.objects.filter(username=data['username']).exclude(id=user_id).exists():
+                    return JsonResponse({'success': False, 'message': 'Username already taken'}, status=400)
+                target_user.username = data['username']
+            
+            if 'email' in data:
+                target_user.email = data['email']
+            
+            if 'first_name' in data:
+                target_user.first_name = data['first_name']
+            
+            if 'password' in data and data['password']:
+                target_user.set_password(data['password'])
+            
+            # Only superusers can modify is_superuser, and can't demote themselves
+            if 'is_superuser' in data:
+                if target_user.id != admin.id:  # Can't change own admin status
+                    target_user.is_superuser = data['is_superuser']
+            
+            target_user.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'User updated successfully',
+                'user': {
+                    'id': target_user.id,
+                    'username': target_user.username,
+                    'email': target_user.email,
+                    'first_name': target_user.first_name,
+                    'is_superuser': target_user.is_superuser
+                }
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    # Handle DELETE
+    if request.method == 'DELETE':
+        if target_user.id == admin.id:
+            return JsonResponse({'success': False, 'message': 'Cannot delete yourself'}, status=400)
+        
+        # Delete user's analysis logs and images
+        user_logs = AnalysisLog.objects.filter(user=target_user)
+        for log in user_logs:
+            old_path = os.path.join("DetectionApp/static", log.image_path)
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        user_logs.delete()
+        
+        target_user.delete()
+        return JsonResponse({'success': True, 'message': 'User deleted successfully'})
+    
     return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
 
 @csrf_exempt
@@ -232,19 +448,25 @@ def predict_api(request):
                 return JsonResponse({'success': False, 'message': 'No image provided'}, status=400)
             
             file = request.FILES['image']
-            filename = file.name
+            
+            # Generate unique filename for history
+            ext = os.path.splitext(file.name)[1]
+            filename = f"{uuid.uuid4()}{ext}"
             
             # Save file temporarily
             if not os.path.exists("DetectionApp/static"):
                 os.makedirs("DetectionApp/static")
             
             save_path = os.path.join("DetectionApp/static", filename)
-            if os.path.exists(save_path):
-                os.remove(save_path)
             
+            # Read file content and compute hash for duplicate detection
+            import hashlib
+            file_content = file.read()
+            image_hash = hashlib.md5(file_content).hexdigest()
+            
+            # Write file to disk
             with open(save_path, "wb") as f:
-                for chunk in file.chunks():
-                    f.write(chunk)
+                f.write(file_content)
             
             # Load model and predict
             model_path = "model/nasnet_weights.hdf5"
@@ -256,11 +478,49 @@ def predict_api(request):
             # classifyImage returns dict with image and prediction data
             result = classifyImage(save_path, model)
             
+            # Log analysis - try session first, then X-User-ID header
+            user = None
+            if request.user.is_authenticated:
+                user = request.user
+            else:
+                user_id = request.headers.get('X-User-ID')
+                if user_id:
+                    try:
+                        user = User.objects.get(id=int(user_id))
+                    except (User.DoesNotExist, ValueError):
+                        pass
+            
+            if user:
+                # Delete any existing entry with the same image hash (duplicate detection)
+                old_entries = AnalysisLog.objects.filter(user=user, image_hash=image_hash)
+                for old_entry in old_entries:
+                    # Delete the old image file
+                    old_path = os.path.join("DetectionApp/static", old_entry.image_path)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                old_entries.delete()
+                
+                # Create new entry
+                AnalysisLog.objects.create(
+                    user=user,
+                    image_path=filename,
+                    is_real=result['is_real'],
+                    confidence=result['confidence'],
+                    real_prob=result['real_prob'],
+                    fake_prob=result['fake_prob'],
+                    explanation_image=result.get('image', ''),  # Base64 XAI visualization
+                    explanation_text=result.get('explanation', ''),
+                    image_hash=image_hash
+                )
+
+            
             return JsonResponse({
                 'success': True, 
                 'image': result['image'],
                 'isReal': result['is_real'],
                 'confidence': result['confidence'],
+                'real_prob': result['real_prob'],
+                'fake_prob': result['fake_prob'],
                 'status': result['status'],
                 'explanation': result['explanation'],
                 'message': 'Prediction complete'

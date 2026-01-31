@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 export default function Dashboard() {
@@ -11,6 +12,7 @@ export default function Dashboard() {
     const [analysisStage, setAnalysisStage] = useState(''); // 'processing', 'generating', 'complete'
     const [showResult, setShowResult] = useState(false);
     const fileInputRef = useRef(null);
+    const navigate = useNavigate();
 
     const handleFileSelect = (file) => {
         if (file && file.type.startsWith('image/')) {
@@ -38,9 +40,14 @@ export default function Dashboard() {
             // Simulate stage transitions with slightly longer times for better feel
             setTimeout(() => setAnalysisStage('generating'), 2000);
 
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+            const userId = localStorage.getItem('user_id');
             const response = await axios.post(`${apiUrl}/predict`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'X-User-ID': userId || ''
+                },
+                withCredentials: true
             });
 
             setAnalysisStage('complete');
@@ -92,6 +99,12 @@ export default function Dashboard() {
         setLoading(false);
         setAnalysisStage('');
         setShowResult(false);
+    };
+
+    const handleLogout = () => {
+        // Clear any stored tokens if you have them (e.g. localStorage.removeItem('token'))
+        localStorage.removeItem('token'); // Example
+        navigate('/');
     };
 
     useEffect(() => {
@@ -373,6 +386,60 @@ export default function Dashboard() {
             borderRadius: '12px',
             color: 'rgba(248, 113, 113, 0.9)',
             fontSize: '14px'
+        },
+        // Advanced Analysis Styles
+        advancedContainer: {
+            marginBottom: '32px',
+            padding: '24px',
+            background: 'rgba(255, 255, 255, 0.02)',
+            borderRadius: '16px',
+            border: '1px solid rgba(255, 255, 255, 0.05)'
+        },
+        advancedTitle: {
+            color: '#e0e0e8',
+            fontSize: '16px',
+            fontWeight: '600',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+        },
+        probRow: {
+            marginBottom: '16px'
+        },
+        probLabel: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            color: '#a0a0ab',
+            fontSize: '13px',
+            marginBottom: '8px',
+            fontWeight: '500'
+        },
+        progressBarTrack: {
+            width: '100%',
+            height: '8px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '4px',
+            overflow: 'hidden'
+        },
+
+        // Large Reset Button
+        resetButtonLarge: {
+            marginTop: '32px',
+            width: '100%',
+            padding: '16px',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '12px',
+            color: '#e0e0e8',
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px'
         }
     };
 
@@ -397,9 +464,10 @@ export default function Dashboard() {
                     </div>
                     <span>VeriAI</span>
                 </div>
-                {preview && !loading && (
+
+                <div style={{ display: 'flex', gap: '12px' }}>
                     <button
-                        onClick={handleReset}
+                        onClick={() => navigate('/history')}
                         style={styles.resetLink}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
@@ -411,11 +479,29 @@ export default function Dashboard() {
                         }}
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        New Analysis
+                        History
                     </button>
-                )}
+
+                    <button
+                        onClick={handleLogout}
+                        style={styles.resetLink}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
+                            e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                            e.currentTarget.style.color = '#a0a0ab';
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Logout
+                    </button>
+                </div>
             </nav>
 
             <div style={styles.mainContent}>
@@ -457,6 +543,220 @@ export default function Dashboard() {
                                 onChange={handleInputChange}
                                 style={{ display: 'none' }}
                             />
+                        </div>
+
+                        {/* Workflow Section */}
+                        <div style={{
+                            marginTop: '60px',
+                            background: 'linear-gradient(145deg, #16161a 0%, #1a1a1f 100%)',
+                            borderRadius: '20px',
+                            padding: '40px 48px',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            boxShadow: '0 16px 48px -12px rgba(0,0,0,0.5)',
+                            maxWidth: '900px',
+                            width: 'calc(100vw - 80px)',
+                            marginLeft: 'auto',
+                            marginRight: 'auto',
+                            position: 'relative',
+                            left: '50%',
+                            transform: 'translateX(-50%)'
+                        }}>
+                            <h3 style={{
+                                color: '#ffffff',
+                                fontSize: '18px',
+                                fontWeight: '600',
+                                marginBottom: '28px',
+                                textAlign: 'center',
+                                letterSpacing: '-0.01em'
+                            }}>
+                                How It Works
+                            </h3>
+
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(4, 1fr)',
+                                gap: '16px'
+                            }}>
+                                {/* Step 1 */}
+                                <div style={{
+                                    background: '#121216',
+                                    borderRadius: '14px',
+                                    padding: '20px',
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    textAlign: 'center',
+                                    transition: 'all 0.3s ease'
+                                }}>
+                                    <div style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)',
+                                        borderRadius: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        margin: '0 auto 14px',
+                                        color: '#6ba3ff'
+                                    }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                    <div style={{
+                                        color: '#6ba3ff',
+                                        fontSize: '11px',
+                                        fontWeight: '600',
+                                        letterSpacing: '0.08em',
+                                        marginBottom: '6px',
+                                        textTransform: 'uppercase'
+                                    }}>Step 1</div>
+                                    <div style={{
+                                        color: '#e0e0e8',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        marginBottom: '6px'
+                                    }}>Upload Image</div>
+                                    <div style={{
+                                        color: '#70707a',
+                                        fontSize: '12px',
+                                        lineHeight: '1.5'
+                                    }}>Drag & drop or browse to select an image for analysis</div>
+                                </div>
+
+                                {/* Step 2 */}
+                                <div style={{
+                                    background: '#121216',
+                                    borderRadius: '14px',
+                                    padding: '20px',
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    textAlign: 'center',
+                                    transition: 'all 0.3s ease'
+                                }}>
+                                    <div style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)',
+                                        borderRadius: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        margin: '0 auto 14px',
+                                        color: '#6ba3ff'
+                                    }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                    <div style={{
+                                        color: '#6ba3ff',
+                                        fontSize: '11px',
+                                        fontWeight: '600',
+                                        letterSpacing: '0.08em',
+                                        marginBottom: '6px',
+                                        textTransform: 'uppercase'
+                                    }}>Step 2</div>
+                                    <div style={{
+                                        color: '#e0e0e8',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        marginBottom: '6px'
+                                    }}>CNN Analysis</div>
+                                    <div style={{
+                                        color: '#70707a',
+                                        fontSize: '12px',
+                                        lineHeight: '1.5'
+                                    }}>Deep learning model extracts features & patterns</div>
+                                </div>
+
+                                {/* Step 3 */}
+                                <div style={{
+                                    background: '#121216',
+                                    borderRadius: '14px',
+                                    padding: '20px',
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    textAlign: 'center',
+                                    transition: 'all 0.3s ease'
+                                }}>
+                                    <div style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)',
+                                        borderRadius: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        margin: '0 auto 14px',
+                                        color: '#6ba3ff'
+                                    }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                    <div style={{
+                                        color: '#6ba3ff',
+                                        fontSize: '11px',
+                                        fontWeight: '600',
+                                        letterSpacing: '0.08em',
+                                        marginBottom: '6px',
+                                        textTransform: 'uppercase'
+                                    }}>Step 3</div>
+                                    <div style={{
+                                        color: '#e0e0e8',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        marginBottom: '6px'
+                                    }}>XAI Interpretation</div>
+                                    <div style={{
+                                        color: '#70707a',
+                                        fontSize: '12px',
+                                        lineHeight: '1.5'
+                                    }}>LIME highlights key regions influencing the decision</div>
+                                </div>
+
+                                {/* Step 4 */}
+                                <div style={{
+                                    background: '#121216',
+                                    borderRadius: '14px',
+                                    padding: '20px',
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    textAlign: 'center',
+                                    transition: 'all 0.3s ease'
+                                }}>
+                                    <div style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)',
+                                        borderRadius: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        margin: '0 auto 14px',
+                                        color: '#6ba3ff'
+                                    }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                    <div style={{
+                                        color: '#6ba3ff',
+                                        fontSize: '11px',
+                                        fontWeight: '600',
+                                        letterSpacing: '0.08em',
+                                        marginBottom: '6px',
+                                        textTransform: 'uppercase'
+                                    }}>Step 4</div>
+                                    <div style={{
+                                        color: '#e0e0e8',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        marginBottom: '6px'
+                                    }}>View Results</div>
+                                    <div style={{
+                                        color: '#70707a',
+                                        fontSize: '12px',
+                                        lineHeight: '1.5'
+                                    }}>Get prediction with confidence score & visual explanation</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -551,6 +851,54 @@ export default function Dashboard() {
                                     </div>
                                 </div>
 
+                                {/* Advanced Analysis Section */}
+                                <div style={styles.advancedContainer}>
+                                    <div style={styles.advancedTitle}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ba3ff" strokeWidth="2">
+                                            <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                        Advanced Analysis
+                                    </div>
+
+                                    {/* Artificial Probability */}
+                                    <div style={styles.probRow}>
+                                        <div style={styles.probLabel}>
+                                            <span>Artificial / CMD Probability</span>
+                                            <span style={{ color: '#fb923c' }}>{(result.fake_prob || 0).toFixed(1)}%</span>
+                                        </div>
+                                        <div style={styles.progressBarTrack}>
+                                            <div style={{
+                                                width: `${result.fake_prob || 0}%`,
+                                                height: '100%',
+                                                background: '#fb923c',
+                                                borderRadius: '4px',
+                                                transition: 'width 1s ease-out'
+                                            }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Real Probability */}
+                                    <div style={{ ...styles.probRow, marginBottom: 0 }}>
+                                        <div style={styles.probLabel}>
+                                            <span>Authentic / Real Probability</span>
+                                            <span style={{ color: '#34d399' }}>{(result.real_prob || 0).toFixed(1)}%</span>
+                                        </div>
+                                        <div style={styles.progressBarTrack}>
+                                            <div style={{
+                                                width: `${result.real_prob || 0}%`,
+                                                height: '100%',
+                                                background: '#34d399',
+                                                borderRadius: '4px',
+                                                transition: 'width 1s ease-out'
+                                            }} />
+                                        </div>
+                                    </div>
+
+                                    <p style={{ marginTop: '20px', fontSize: '12px', color: '#70707a', lineHeight: '1.5' }}>
+                                        * Probabilities indicate the model's confidence distribution. The dominant class determines the final verdict. Analysis considers frequency patterns, noise distribution, and compression artifacts.
+                                    </p>
+                                </div>
+
                                 {/* XAI Output */}
                                 {result.image && (
                                     <div style={styles.xaiContainer}>
@@ -577,6 +925,25 @@ export default function Dashboard() {
                                         </p>
                                     </div>
                                 )}
+
+                                {/* Start New Analysis Button */}
+                                <button
+                                    onClick={handleReset}
+                                    style={styles.resetButtonLarge}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
+                                >
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    Start New Analysis
+                                </button>
                             </div>
                         )}
                     </div>
@@ -598,6 +965,6 @@ export default function Dashboard() {
                     100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(107, 163, 255, 0); }
                 }
             `}</style>
-        </div>
+        </div >
     );
 }
