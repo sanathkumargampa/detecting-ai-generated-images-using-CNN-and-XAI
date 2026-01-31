@@ -129,16 +129,17 @@ export default function Dashboard() {
             fontFamily: "'Inter', sans-serif", // Ensure modern font if possible, falls back to default
         },
         nav: {
-            padding: '24px 40px', // Increased height
+            padding: '24px 40px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(255,255,255,0.03)',
-            background: 'rgba(10, 10, 12, 0.8)',
-            backdropFilter: 'blur(12px)',
-            position: 'sticky',
+            background: 'transparent',
+            position: 'absolute',
             top: 0,
-            zIndex: 100
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            // Removed border and shadow for cleaner split-view
         },
         logo: {
             display: 'flex',
@@ -150,30 +151,88 @@ export default function Dashboard() {
             letterSpacing: '-0.01em'
         },
         mainContent: {
-            maxWidth: '1000px', // Wider layout for dashboard
+            maxWidth: '1400px',
             margin: '0 auto',
-            padding: '80px 24px'
+            padding: '120px 40px 40px', // Added top padding for fixed nav
+            minHeight: '100vh',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(400px, 1fr) 1.5fr',
+            gap: '60px',
+            alignItems: 'start' // Align to top for sticky behavior
+        },
+        leftPanel: {
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            paddingRight: '20px',
+            position: 'sticky',
+            top: '120px',
+            height: 'fit-content'
+        },
+        rightPanel: {
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            padding: '20px',
+            minHeight: 'calc(100vh - 160px)', // Ensure full height for centering
+            justifyContent: 'center' // Default center for upload, content pushes it for results
+        },
+
+        // Workflow Steps Styles
+        stepItem: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            padding: '16px',
+            background: 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '16px',
+            border: '1px solid rgba(255, 255, 255, 0.05)'
+        },
+        stepNumber: {
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.2) 0%, rgba(107, 163, 255, 0.05) 100%)',
+            color: '#6ba3ff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: '700',
+            fontSize: '14px'
+        },
+        stepTitle: {
+            color: '#e0e0e8',
+            fontSize: '15px',
+            fontWeight: '600',
+            margin: '0 0 4px 0'
+        },
+        stepDesc: {
+            color: '#888890',
+            fontSize: '12px',
+            margin: 0
         },
 
         // Upload Zone (Pre-Analysis)
         uploadCard: {
-            maxWidth: '640px',
-            margin: '0 auto'
+            width: '100%',
+            maxWidth: '750px', // Increased width
+            margin: 'auto' // Vertically center in rightPanel
         },
         uploadZone: {
             background: 'linear-gradient(145deg, #18181d 0%, #1c1c22 100%)',
-            borderRadius: '24px',
-            padding: '100px 48px',
+            borderRadius: '32px', // Slightly rounder
+            padding: '100px 48px', // Increased height/padding
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             boxShadow: '0 24px 80px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03)',
-            border: isDragging ? '2px solid rgba(99, 179, 237, 0.5)' : '2px solid transparent'
+            border: isDragging ? '2px dashed #6ba3ff' : '2px dashed rgba(255, 255, 255, 0.1)',
+            background: isDragging ? 'rgba(107, 163, 255, 0.05)' : 'linear-gradient(145deg, #18181d 0%, #1c1c22 100%)'
         },
         uploadIcon: {
-            width: '48px',
-            height: '48px',
-            margin: '0 auto 24px',
+            width: '64px', // Larger icon
+            height: '64px',
+            margin: '0 auto 32px',
             color: '#6ba3ff',
             opacity: 0.9,
             filter: 'drop-shadow(0 4px 12px rgba(107, 163, 255, 0.3))'
@@ -198,7 +257,7 @@ export default function Dashboard() {
             overflow: 'hidden',
             boxShadow: '0 32px 80px -24px rgba(0,0,0,0.7)',
             maxWidth: '800px',
-            margin: '0 auto',
+            margin: 'auto', // Vertically center
             border: '1px solid rgba(255,255,255,0.03)'
         },
         imagePreviewWrapper: {
@@ -280,9 +339,9 @@ export default function Dashboard() {
             borderRadius: '12px',
             fontSize: '13px',
             fontWeight: '600',
-            letterSpacing: '0.05em',
             textTransform: 'uppercase',
-            marginBottom: '16px'
+            marginBottom: '20px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
         },
         realBadge: {
             background: 'rgba(52, 211, 153, 0.1)',
@@ -316,20 +375,21 @@ export default function Dashboard() {
         confidenceValue: {
             color: '#e0e0e8',
             fontSize: '36px',
-            fontWeight: '600',
+            fontWeight: '700',
             margin: 0,
-            letterSpacing: '-0.02em',
-            background: 'linear-gradient(135deg, #fff 0%, #a0a0aa 100%)',
+            letterSpacing: '-0.03em',
+            background: 'linear-gradient(135deg, #ffffff 0%, #94a3b8 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            display: 'inline-block'
+            display: 'inline-block',
+            textShadow: '0 10px 30px rgba(0,0,0,0.2)'
         },
         xaiContainer: {
-            background: '#121216',
-            borderRadius: '20px',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.02) 100%)',
+            borderRadius: '24px',
             padding: '32px',
-            border: '1px solid rgba(255,255,255,0.03)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)'
+            border: '1px solid rgba(255,255,255,0.05)',
+            boxShadow: '0 8px 32px -8px rgba(0,0,0,0.5)'
         },
         xaiHeader: {
             display: 'flex',
@@ -364,19 +424,39 @@ export default function Dashboard() {
             lineHeight: '1.6',
             textAlign: 'center'
         },
-        resetLink: {
+        navLink: {
             background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '10px',
-            padding: '10px 20px',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '8px 16px',
             color: '#a0a0ab',
-            fontSize: '13px',
+            fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            textDecoration: 'none'
+        },
+        navLinkActive: {
+            color: '#fff',
+            background: 'rgba(255,255,255,0.05)'
+        },
+        logoutBtn: {
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            borderRadius: '8px',
+            padding: '8px 16px',
+            color: '#f87171',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginLeft: '12px'
         },
         errorMessage: {
             textAlign: 'center',
@@ -390,10 +470,11 @@ export default function Dashboard() {
         // Advanced Analysis Styles
         advancedContainer: {
             marginBottom: '32px',
-            padding: '24px',
-            background: 'rgba(255, 255, 255, 0.02)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.05)'
+            padding: '32px',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.03) 100%)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)'
         },
         advancedTitle: {
             color: '#e0e0e8',
@@ -428,10 +509,10 @@ export default function Dashboard() {
             marginTop: '32px',
             width: '100%',
             padding: '16px',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            color: '#e0e0e8',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+            border: '1px solid rgba(59, 130, 246, 0.2)',
+            borderRadius: '16px',
+            color: '#6ba3ff',
             fontSize: '15px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -458,46 +539,67 @@ export default function Dashboard() {
                         justifyContent: 'center',
                         boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
                     }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
                         </svg>
                     </div>
                     <span>VeriAI</span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <button
                         onClick={() => navigate('/history')}
-                        style={styles.resetLink}
+                        style={styles.navLink}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
                             e.currentTarget.style.color = '#ffffff';
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
                             e.currentTarget.style.color = '#a0a0ab';
+                            e.currentTarget.style.background = 'transparent';
                         }}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                         History
                     </button>
 
                     <button
-                        onClick={handleLogout}
-                        style={styles.resetLink}
+                        onClick={() => navigate('/settings')}
+                        style={styles.navLink}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
                             e.currentTarget.style.color = '#ffffff';
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
                             e.currentTarget.style.color = '#a0a0ab';
+                            e.currentTarget.style.background = 'transparent';
                         }}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Settings
+                    </button>
+
+                    <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 12px' }}></div>
+
+                    <button
+                        onClick={handleLogout}
+                        style={styles.logoutBtn}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                        }}
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                         Logout
                     </button>
@@ -505,456 +607,285 @@ export default function Dashboard() {
             </nav>
 
             <div style={styles.mainContent}>
-
-                {/* Upload Zone */}
-                {!preview && (
-                    <div style={styles.uploadCard}>
-                        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                            <h1 style={{ color: '#ffffff', fontSize: '32px', fontWeight: 'bold', marginBottom: '12px', letterSpacing: '-0.02em' }}>Detect AI-Generated Images</h1>
-                            <p style={{ color: '#888890', fontSize: '16px' }}>Upload an image to check authenticity using our advanced CNN + XAI model</p>
-                        </div>
-                        <div
-                            style={styles.uploadZone}
-                            onDrop={handleDrop}
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onClick={handleBrowse}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-4px)';
-                                e.currentTarget.style.boxShadow = '0 32px 90px -24px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = '0 24px 80px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03)';
-                            }}
-                        >
-                            <div style={styles.uploadIcon}>
-                                <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                    <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            </div>
-                            <p style={styles.uploadText}>
-                                Drop image here or <span style={styles.browseLink}>browse</span>
-                            </p>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleInputChange}
-                                style={{ display: 'none' }}
-                            />
-                        </div>
-
-                        {/* Workflow Section */}
-                        <div style={{
-                            marginTop: '60px',
-                            background: 'linear-gradient(145deg, #16161a 0%, #1a1a1f 100%)',
-                            borderRadius: '20px',
-                            padding: '40px 48px',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            boxShadow: '0 16px 48px -12px rgba(0,0,0,0.5)',
-                            maxWidth: '900px',
-                            width: 'calc(100vw - 80px)',
-                            marginLeft: 'auto',
-                            marginRight: 'auto',
-                            position: 'relative',
-                            left: '50%',
-                            transform: 'translateX(-50%)'
+                {/* LEFT PANEL: Static Info & Instructions */}
+                <div style={styles.leftPanel}>
+                    <div>
+                        <h1 style={{
+                            background: 'linear-gradient(135deg, #fff 0%, #a5b4fc 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            fontSize: '56px',
+                            fontWeight: '800',
+                            marginBottom: '24px',
+                            letterSpacing: '-0.02em',
+                            lineHeight: '1.1'
                         }}>
-                            <h3 style={{
-                                color: '#ffffff',
-                                fontSize: '18px',
-                                fontWeight: '600',
-                                marginBottom: '28px',
-                                textAlign: 'center',
-                                letterSpacing: '-0.01em'
-                            }}>
-                                How It Works
-                            </h3>
+                            Detect AI-Generated Images
+                        </h1>
+                        <p style={{ color: '#94a3b8', fontSize: '18px', lineHeight: '1.6', marginBottom: '48px', maxWidth: '90%' }}>
+                            Ensure authenticity with our advanced dual-layer analysis. We combine <strong>CNN Deep Learning</strong> with <strong>XAI Interpretation</strong> to reveal the truth behind every pixel.
+                        </p>
 
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(4, 1fr)',
-                                gap: '16px'
-                            }}>
-                                {/* Step 1 */}
-                                <div style={{
-                                    background: '#121216',
-                                    borderRadius: '14px',
-                                    padding: '20px',
-                                    border: '1px solid rgba(255,255,255,0.04)',
-                                    textAlign: 'center',
-                                    transition: 'all 0.3s ease'
-                                }}>
-                                    <div style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)',
-                                        borderRadius: '10px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        margin: '0 auto 14px',
-                                        color: '#6ba3ff'
-                                    }}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
-                                    <div style={{
-                                        color: '#6ba3ff',
-                                        fontSize: '11px',
-                                        fontWeight: '600',
-                                        letterSpacing: '0.08em',
-                                        marginBottom: '6px',
-                                        textTransform: 'uppercase'
-                                    }}>Step 1</div>
-                                    <div style={{
-                                        color: '#e0e0e8',
-                                        fontSize: '14px',
-                                        fontWeight: '500',
-                                        marginBottom: '6px'
-                                    }}>Upload Image</div>
-                                    <div style={{
-                                        color: '#70707a',
-                                        fontSize: '12px',
-                                        lineHeight: '1.5'
-                                    }}>Drag & drop or browse to select an image for analysis</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div style={styles.stepItem}>
+                                <div style={styles.stepNumber}>1</div>
+                                <div>
+                                    <h4 style={styles.stepTitle}>Upload Image</h4>
+                                    <p style={styles.stepDesc}>Drag & drop any image format</p>
                                 </div>
-
-                                {/* Step 2 */}
-                                <div style={{
-                                    background: '#121216',
-                                    borderRadius: '14px',
-                                    padding: '20px',
-                                    border: '1px solid rgba(255,255,255,0.04)',
-                                    textAlign: 'center',
-                                    transition: 'all 0.3s ease'
-                                }}>
-                                    <div style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)',
-                                        borderRadius: '10px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        margin: '0 auto 14px',
-                                        color: '#6ba3ff'
-                                    }}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
-                                    <div style={{
-                                        color: '#6ba3ff',
-                                        fontSize: '11px',
-                                        fontWeight: '600',
-                                        letterSpacing: '0.08em',
-                                        marginBottom: '6px',
-                                        textTransform: 'uppercase'
-                                    }}>Step 2</div>
-                                    <div style={{
-                                        color: '#e0e0e8',
-                                        fontSize: '14px',
-                                        fontWeight: '500',
-                                        marginBottom: '6px'
-                                    }}>CNN Analysis</div>
-                                    <div style={{
-                                        color: '#70707a',
-                                        fontSize: '12px',
-                                        lineHeight: '1.5'
-                                    }}>Deep learning model extracts features & patterns</div>
+                            </div>
+                            <div style={styles.stepItem}>
+                                <div style={styles.stepNumber}>2</div>
+                                <div>
+                                    <h4 style={styles.stepTitle}>AI & XAI Analysis</h4>
+                                    <p style={styles.stepDesc}>CNN + Visual Explanations</p>
                                 </div>
-
-                                {/* Step 3 */}
-                                <div style={{
-                                    background: '#121216',
-                                    borderRadius: '14px',
-                                    padding: '20px',
-                                    border: '1px solid rgba(255,255,255,0.04)',
-                                    textAlign: 'center',
-                                    transition: 'all 0.3s ease'
-                                }}>
-                                    <div style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)',
-                                        borderRadius: '10px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        margin: '0 auto 14px',
-                                        color: '#6ba3ff'
-                                    }}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
-                                    <div style={{
-                                        color: '#6ba3ff',
-                                        fontSize: '11px',
-                                        fontWeight: '600',
-                                        letterSpacing: '0.08em',
-                                        marginBottom: '6px',
-                                        textTransform: 'uppercase'
-                                    }}>Step 3</div>
-                                    <div style={{
-                                        color: '#e0e0e8',
-                                        fontSize: '14px',
-                                        fontWeight: '500',
-                                        marginBottom: '6px'
-                                    }}>XAI Interpretation</div>
-                                    <div style={{
-                                        color: '#70707a',
-                                        fontSize: '12px',
-                                        lineHeight: '1.5'
-                                    }}>LIME highlights key regions influencing the decision</div>
-                                </div>
-
-                                {/* Step 4 */}
-                                <div style={{
-                                    background: '#121216',
-                                    borderRadius: '14px',
-                                    padding: '20px',
-                                    border: '1px solid rgba(255,255,255,0.04)',
-                                    textAlign: 'center',
-                                    transition: 'all 0.3s ease'
-                                }}>
-                                    <div style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)',
-                                        borderRadius: '10px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        margin: '0 auto 14px',
-                                        color: '#6ba3ff'
-                                    }}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
-                                    <div style={{
-                                        color: '#6ba3ff',
-                                        fontSize: '11px',
-                                        fontWeight: '600',
-                                        letterSpacing: '0.08em',
-                                        marginBottom: '6px',
-                                        textTransform: 'uppercase'
-                                    }}>Step 4</div>
-                                    <div style={{
-                                        color: '#e0e0e8',
-                                        fontSize: '14px',
-                                        fontWeight: '500',
-                                        marginBottom: '6px'
-                                    }}>View Results</div>
-                                    <div style={{
-                                        color: '#70707a',
-                                        fontSize: '12px',
-                                        lineHeight: '1.5'
-                                    }}>Get prediction with confidence score & visual explanation</div>
+                            </div>
+                            <div style={styles.stepItem}>
+                                <div style={styles.stepNumber}>3</div>
+                                <div>
+                                    <h4 style={styles.stepTitle}>Instant Results</h4>
+                                    <p style={styles.stepDesc}>Get verdict with visual proof</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                )}
+                </div>
 
-                {/* Analysis & Results */}
-                {preview && (
-                    <div style={styles.analysisContainer}>
-                        {/* Image Preview Area */}
-                        <div style={styles.imagePreviewWrapper}>
-                            <img
-                                src={preview}
-                                alt="Analysis Target"
-                                style={styles.imagePreview}
-                            />
+                {/* RIGHT PANEL */}
+                <div style={styles.rightPanel}>
 
-                            {/* Remove Image Button */}
-                            <button
-                                onClick={handleReset}
-                                style={{
-                                    position: 'absolute',
-                                    top: '20px',
-                                    right: '20px',
-                                    background: 'rgba(0, 0, 0, 0.6)',
-                                    border: 'none',
-                                    borderRadius: '50%',
-                                    width: '32px',
-                                    height: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    color: '#fff',
-                                    transition: 'background 0.2s',
-                                    zIndex: 10
+                    {/* Upload Zone */}
+                    {!preview && (
+                        <div style={styles.uploadCard}>
+                            {/* Header Removed */}
+                            <div
+                                style={styles.uploadZone}
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onClick={handleBrowse}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-4px)';
+                                    e.currentTarget.style.boxShadow = '0 32px 90px -24px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)';
                                 }}
-                                onMouseEnter={(e) => e.target.style.background = 'rgba(239, 68, 68, 0.8)'}
-                                onMouseLeave={(e) => e.target.style.background = 'rgba(0, 0, 0, 0.6)'}
-                                title="Remove image"
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 24px 80px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03)';
+                                }}
                             >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ pointerEvents: 'none' }}>
-                                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            </button>
+                                <div style={styles.uploadIcon}>
+                                    <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                                <p style={styles.uploadText}>
+                                    Drop image here or <span style={styles.browseLink}>browse</span>
+                                </p>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleInputChange}
+                                    style={{ display: 'none' }}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    {preview && (
+                        <div style={styles.analysisContainer}>
+                            {/* Image Preview Area */}
+                            <div style={styles.imagePreviewWrapper}>
+                                <img
+                                    src={preview}
+                                    alt="Analysis Target"
+                                    style={styles.imagePreview}
+                                />
 
-                            {/* Animated Analysis Overlay */}
-                            {loading && (
-                                <div style={styles.analysisOverlay}>
-                                    <div style={styles.pulseIndicator} />
-                                    <div>
-                                        <p style={styles.analysisText}>
-                                            {analysisStage === 'processing' && 'Analyzing image structure...'}
-                                            {analysisStage === 'generating' && 'Running XAI interpretation...'}
-                                            {analysisStage === 'complete' && 'Finalizing results...'}
-                                        </p>
-                                        <p style={styles.analysisSubtext}>
-                                            Using CNN Model & LIME
+                                {/* Remove Image Button */}
+                                <button
+                                    onClick={handleReset}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '20px',
+                                        right: '20px',
+                                        background: 'rgba(0, 0, 0, 0.6)',
+                                        border: 'none',
+                                        borderRadius: '50%',
+                                        width: '32px',
+                                        height: '32px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        color: '#fff',
+                                        transition: 'background 0.2s',
+                                        zIndex: 10
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.background = 'rgba(239, 68, 68, 0.8)'}
+                                    onMouseLeave={(e) => e.target.style.background = 'rgba(0, 0, 0, 0.6)'}
+                                    title="Remove image"
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ pointerEvents: 'none' }}>
+                                        <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </button>
+
+                                {/* Animated Analysis Overlay */}
+                                {loading && (
+                                    <div style={styles.analysisOverlay}>
+                                        <div style={styles.pulseIndicator} />
+                                        <div>
+                                            <p style={styles.analysisText}>
+                                                {analysisStage === 'processing' && 'Analyzing image structure...'}
+                                                {analysisStage === 'generating' && 'Running XAI interpretation...'}
+                                                {analysisStage === 'complete' && 'Finalizing results...'}
+                                            </p>
+                                            <p style={styles.analysisSubtext}>
+                                                Using CNN Model & LIME
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Results Panel */}
+                            {result && (
+                                <div style={styles.resultContainer}>
+                                    {/* Header with Verdict and Confidence */}
+                                    <div style={styles.resultHeader}>
+                                        <div style={styles.verdictGroup}>
+                                            <div style={{
+                                                ...styles.resultBadge,
+                                                ...(result.isReal ? styles.realBadge : styles.fakeBadge)
+                                            }}>
+                                                {result.isReal ? (
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                        <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                )}
+                                                {result.isReal ? 'Authentic' : 'AI-Generated'}
+                                            </div>
+                                            <h2 style={styles.predictionTitle}>
+                                                {result.isReal ? 'Likely Real Image' : 'Likely AI-Generated'}
+                                            </h2>
+                                        </div>
+
+                                        <div style={styles.confidenceGroup}>
+                                            <p style={styles.confidenceLabel}>Confidence Score</p>
+                                            <p style={styles.confidenceValue}>{result.confidence?.toFixed(1)}%</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Advanced Analysis Section */}
+                                    <div style={styles.advancedContainer}>
+                                        <div style={styles.advancedTitle}>
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ba3ff" strokeWidth="2">
+                                                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                            Advanced Analysis
+                                        </div>
+
+                                        {/* Artificial Probability */}
+                                        <div style={styles.probRow}>
+                                            <div style={styles.probLabel}>
+                                                <span>Artificial / CMD Probability</span>
+                                                <span style={{ color: '#fb923c' }}>{(result.fake_prob || 0).toFixed(1)}%</span>
+                                            </div>
+                                            <div style={styles.progressBarTrack}>
+                                                <div style={{
+                                                    width: `${result.fake_prob || 0}%`,
+                                                    height: '100%',
+                                                    background: '#fb923c',
+                                                    borderRadius: '4px',
+                                                    transition: 'width 1s ease-out'
+                                                }} />
+                                            </div>
+                                        </div>
+
+                                        {/* Real Probability */}
+                                        <div style={{ ...styles.probRow, marginBottom: 0 }}>
+                                            <div style={styles.probLabel}>
+                                                <span>Authentic / Real Probability</span>
+                                                <span style={{ color: '#34d399' }}>{(result.real_prob || 0).toFixed(1)}%</span>
+                                            </div>
+                                            <div style={styles.progressBarTrack}>
+                                                <div style={{
+                                                    width: `${result.real_prob || 0}%`,
+                                                    height: '100%',
+                                                    background: '#34d399',
+                                                    borderRadius: '4px',
+                                                    transition: 'width 1s ease-out'
+                                                }} />
+                                            </div>
+                                        </div>
+
+                                        <p style={{ marginTop: '20px', fontSize: '12px', color: '#70707a', lineHeight: '1.5' }}>
+                                            * Probabilities indicate the model's confidence distribution. The dominant class determines the final verdict. Analysis considers frequency patterns, noise distribution, and compression artifacts.
                                         </p>
                                     </div>
+
+                                    {/* XAI Output */}
+                                    {result.image && (
+                                        <div style={styles.xaiContainer}>
+                                            <div style={styles.xaiHeader}>
+                                                <div style={styles.xaiIcon}>
+                                                    <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </div>
+                                                <h3 style={styles.xaiTitleText}>Visual Explanation (XAI)</h3>
+                                            </div>
+
+                                            <img
+                                                src={`data:image/png;base64,${result.image}`}
+                                                alt="XAI LIME Visualization"
+                                                style={styles.xaiImage}
+                                            />
+
+                                            <p style={styles.xaiExplanation}>
+                                                {result.explanation || (result.isReal
+                                                    ? "The model identified consistent high-frequency texture details and natural lighting physics, which are strong indicators of a camera-captured image."
+                                                    : "The model detected tell-tale signs of synthesis, such as unnatural smoothness, lack of fine grain, or structural inconsistencies common in generative models."
+                                                )}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Start New Analysis Button */}
+                                    <button
+                                        onClick={handleReset}
+                                        style={styles.resetButtonLarge}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                        }}
+                                    >
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                        Start New Analysis
+                                    </button>
                                 </div>
                             )}
                         </div>
+                    )}
 
-                        {/* Results Panel */}
-                        {result && (
-                            <div style={styles.resultContainer}>
-                                {/* Header with Verdict and Confidence */}
-                                <div style={styles.resultHeader}>
-                                    <div style={styles.verdictGroup}>
-                                        <div style={{
-                                            ...styles.resultBadge,
-                                            ...(result.isReal ? styles.realBadge : styles.fakeBadge)
-                                        }}>
-                                            {result.isReal ? (
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                                    <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            ) : (
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            )}
-                                            {result.isReal ? 'Authentic' : 'AI-Generated'}
-                                        </div>
-                                        <h2 style={styles.predictionTitle}>
-                                            {result.isReal ? 'Likely Real Image' : 'Likely AI-Generated'}
-                                        </h2>
-                                    </div>
-
-                                    <div style={styles.confidenceGroup}>
-                                        <p style={styles.confidenceLabel}>Confidence Score</p>
-                                        <p style={styles.confidenceValue}>{result.confidence?.toFixed(1)}%</p>
-                                    </div>
-                                </div>
-
-                                {/* Advanced Analysis Section */}
-                                <div style={styles.advancedContainer}>
-                                    <div style={styles.advancedTitle}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ba3ff" strokeWidth="2">
-                                            <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                        Advanced Analysis
-                                    </div>
-
-                                    {/* Artificial Probability */}
-                                    <div style={styles.probRow}>
-                                        <div style={styles.probLabel}>
-                                            <span>Artificial / CMD Probability</span>
-                                            <span style={{ color: '#fb923c' }}>{(result.fake_prob || 0).toFixed(1)}%</span>
-                                        </div>
-                                        <div style={styles.progressBarTrack}>
-                                            <div style={{
-                                                width: `${result.fake_prob || 0}%`,
-                                                height: '100%',
-                                                background: '#fb923c',
-                                                borderRadius: '4px',
-                                                transition: 'width 1s ease-out'
-                                            }} />
-                                        </div>
-                                    </div>
-
-                                    {/* Real Probability */}
-                                    <div style={{ ...styles.probRow, marginBottom: 0 }}>
-                                        <div style={styles.probLabel}>
-                                            <span>Authentic / Real Probability</span>
-                                            <span style={{ color: '#34d399' }}>{(result.real_prob || 0).toFixed(1)}%</span>
-                                        </div>
-                                        <div style={styles.progressBarTrack}>
-                                            <div style={{
-                                                width: `${result.real_prob || 0}%`,
-                                                height: '100%',
-                                                background: '#34d399',
-                                                borderRadius: '4px',
-                                                transition: 'width 1s ease-out'
-                                            }} />
-                                        </div>
-                                    </div>
-
-                                    <p style={{ marginTop: '20px', fontSize: '12px', color: '#70707a', lineHeight: '1.5' }}>
-                                        * Probabilities indicate the model's confidence distribution. The dominant class determines the final verdict. Analysis considers frequency patterns, noise distribution, and compression artifacts.
-                                    </p>
-                                </div>
-
-                                {/* XAI Output */}
-                                {result.image && (
-                                    <div style={styles.xaiContainer}>
-                                        <div style={styles.xaiHeader}>
-                                            <div style={styles.xaiIcon}>
-                                                <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            </div>
-                                            <h3 style={styles.xaiTitleText}>Visual Explanation (XAI)</h3>
-                                        </div>
-
-                                        <img
-                                            src={`data:image/png;base64,${result.image}`}
-                                            alt="XAI LIME Visualization"
-                                            style={styles.xaiImage}
-                                        />
-
-                                        <p style={styles.xaiExplanation}>
-                                            {result.explanation || (result.isReal
-                                                ? "The model identified consistent high-frequency texture details and natural lighting physics, which are strong indicators of a camera-captured image."
-                                                : "The model detected tell-tale signs of synthesis, such as unnatural smoothness, lack of fine grain, or structural inconsistencies common in generative models."
-                                            )}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Start New Analysis Button */}
-                                <button
-                                    onClick={handleReset}
-                                    style={styles.resetButtonLarge}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                    }}
-                                >
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    Start New Analysis
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Error Message */}
-                {error && (
-                    <div style={styles.errorMessage}>
-                        {error}
-                    </div>
-                )}
+                    {/* Error Message */}
+                    {error && (
+                        <div style={styles.errorMessage}>
+                            {error}
+                        </div>
+                    )}
+                </div> {/* Close Right Panel */}
             </div>
 
             {/* CSS Animations */}
@@ -965,6 +896,6 @@ export default function Dashboard() {
                     100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(107, 163, 255, 0); }
                 }
             `}</style>
-        </div >
+        </div>
     );
 }

@@ -175,24 +175,110 @@ def index(request):
     return render(request, 'index.html', {})
 
 @csrf_exempt
+def check_availability_api(request):
+    """Check if username, email, or mobile is already registered"""
+    if request.method == 'POST':
+        try:
+            from .models import UserProfile
+            import re
+            
+            def normalize_mobile(mobile):
+                """Normalize mobile number by removing country code and non-digits"""
+                if not mobile:
+                    return ''
+                # Remove all non-digit characters
+                digits = re.sub(r'\D', '', mobile)
+                # Remove leading country codes (91 for India, common patterns)
+                if digits.startswith('91') and len(digits) > 10:
+                    digits = digits[2:]
+                elif digits.startswith('0') and len(digits) > 10:
+                    digits = digits[1:]
+                return digits[-10:] if len(digits) >= 10 else digits  # Keep last 10 digits
+            
+            data = json.loads(request.body)
+            field = data.get('field')  # 'username', 'email', or 'mobile'
+            value = data.get('value', '').strip()
+            
+            if not value:
+                return JsonResponse({'available': True})
+            
+            if field == 'username':
+                exists = User.objects.filter(username__iexact=value).exists()
+                return JsonResponse({
+                    'available': not exists,
+                    'message': 'Username is already taken' if exists else ''
+                })
+            elif field == 'email':
+                exists = User.objects.filter(email__iexact=value).exists()
+                return JsonResponse({
+                    'available': not exists,
+                    'message': 'Email is already registered' if exists else ''
+                })
+            elif field == 'mobile':
+                normalized = normalize_mobile(value)
+                if len(normalized) < 10:
+                    return JsonResponse({'available': True})  # Not a valid mobile yet
+                # Check all existing mobiles with normalization
+                exists = False
+                for profile in UserProfile.objects.exclude(mobile__isnull=True).exclude(mobile=''):
+                    if normalize_mobile(profile.mobile) == normalized:
+                        exists = True
+                        break
+                return JsonResponse({
+                    'available': not exists,
+                    'message': 'Mobile number is already registered' if exists else ''
+                })
+            else:
+                return JsonResponse({'available': True})
+        except Exception as e:
+            return JsonResponse({'available': True, 'error': str(e)})
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
 def register_api(request):
     if request.method == 'POST':
         try:
+            from .models import UserProfile
+            import re
+            
+            def normalize_mobile(mobile):
+                """Normalize mobile number by removing country code and non-digits"""
+                if not mobile:
+                    return ''
+                digits = re.sub(r'\D', '', mobile)
+                if digits.startswith('91') and len(digits) > 10:
+                    digits = digits[2:]
+                elif digits.startswith('0') and len(digits) > 10:
+                    digits = digits[1:]
+                return digits[-10:] if len(digits) >= 10 else digits
+            
             data = json.loads(request.body)
             name = data.get('name', '')
             username = data.get('username')
             password = data.get('password')
             email = data.get('email')
+            mobile = data.get('mobile', '').strip()
+            normalized_mobile = normalize_mobile(mobile)
             
-            if User.objects.filter(username=username).exists():
+            if User.objects.filter(username__iexact=username).exists():
                  return JsonResponse({'success': False, 'message': 'Username already exists'}, status=400)
             
-            if User.objects.filter(email=email).exists():
+            if User.objects.filter(email__iexact=email).exists():
                  return JsonResponse({'success': False, 'message': 'Email already exists'}, status=400)
+            
+            # Check for duplicate mobile with normalization
+            if normalized_mobile:
+                for profile in UserProfile.objects.exclude(mobile__isnull=True).exclude(mobile=''):
+                    if normalize_mobile(profile.mobile) == normalized_mobile:
+                        return JsonResponse({'success': False, 'message': 'Mobile number already registered'}, status=400)
             
             user = User.objects.create_user(username=username, email=email, password=password)
             user.first_name = name
             user.save()
+            
+            # Create user profile with normalized mobile
+            UserProfile.objects.create(user=user, mobile=normalized_mobile if normalized_mobile else None)
+            
             return JsonResponse({'success': True, 'message': 'Registration successful'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
@@ -293,6 +379,144 @@ def history_api(request):
             })
         return JsonResponse({'success': True, 'history': data})
     return JsonResponse({'success': False, 'message': 'Not authenticated'}, status=401)
+
+@csrf_exempt
+def clear_history_api(request):
+    """Clear all analysis history for the current user"""
+    if request.method != 'DELETE':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+    user = None
+    if request.user.is_authenticated:
+        user = request.user
+    else:
+        user_id = request.headers.get('X-User-ID')
+        if user_id:
+            try:
+                user = User.objects.get(id=int(user_id))
+            except (User.DoesNotExist, ValueError):
+                pass
+    
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Not authenticated'}, status=401)
+    
+    # Delete all user's analysis logs and their images
+    user_logs = AnalysisLog.objects.filter(user=user)
+    deleted_count = 0
+    for log in user_logs:
+        old_path = os.path.join("DetectionApp/static", log.image_path)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+        deleted_count += 1
+    user_logs.delete()
+    
+    return JsonResponse({'success': True, 'message': f'Cleared {deleted_count} history items'})
+
+@csrf_exempt
+def profile_api(request):
+    """Get or update user profile"""
+    import re
+    from .models import UserProfile
+    
+    def normalize_mobile(mobile):
+        if not mobile:
+            return ''
+        digits = re.sub(r'\D', '', mobile)
+        if digits.startswith('91') and len(digits) > 10:
+            digits = digits[2:]
+        elif digits.startswith('0') and len(digits) > 10:
+            digits = digits[1:]
+        return digits[-10:] if len(digits) >= 10 else digits
+    
+    user = None
+    if request.user.is_authenticated:
+        user = request.user
+    else:
+        user_id = request.headers.get('X-User-ID')
+        if user_id:
+            try:
+                user = User.objects.get(id=int(user_id))
+            except (User.DoesNotExist, ValueError):
+                pass
+    
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Not authenticated'}, status=401)
+    
+    # GET - Return user profile
+    if request.method == 'GET':
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        return JsonResponse({
+            'success': True,
+            'profile': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'mobile': profile.mobile or '',
+                'is_superuser': user.is_superuser
+            }
+        })
+    
+    # PUT - Update user profile
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            
+            # Check username availability (excluding current user)
+            new_username = data.get('username', '').strip()
+            if new_username and new_username != user.username:
+                if User.objects.filter(username__iexact=new_username).exclude(id=user.id).exists():
+                    return JsonResponse({'success': False, 'message': 'Username already taken'}, status=400)
+                user.username = new_username
+            
+            # Check email availability
+            new_email = data.get('email', '').strip()
+            if new_email and new_email != user.email:
+                if User.objects.filter(email__iexact=new_email).exclude(id=user.id).exists():
+                    return JsonResponse({'success': False, 'message': 'Email already registered'}, status=400)
+                user.email = new_email
+            
+            # Update name
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            
+            # Update password if provided
+            if data.get('password'):
+                user.set_password(data['password'])
+            
+            user.save()
+            
+            # Update mobile
+            new_mobile = normalize_mobile(data.get('mobile', ''))
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            
+            if new_mobile and new_mobile != normalize_mobile(profile.mobile or ''):
+                # Check if mobile is taken by another user
+                for p in UserProfile.objects.exclude(user=user).exclude(mobile__isnull=True).exclude(mobile=''):
+                    if normalize_mobile(p.mobile) == new_mobile:
+                        return JsonResponse({'success': False, 'message': 'Mobile number already registered'}, status=400)
+            
+            profile.mobile = new_mobile if new_mobile else None
+            profile.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Profile updated successfully',
+                'profile': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'mobile': profile.mobile or '',
+                    'is_superuser': user.is_superuser
+                }
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
 
 @csrf_exempt
 def admin_logs_api(request):

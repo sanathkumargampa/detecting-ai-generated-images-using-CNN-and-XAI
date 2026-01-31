@@ -16,6 +16,10 @@ export default function AdminDashboard() {
     const [message, setMessage] = useState('');
     const navigate = useNavigate();
 
+    // New state for search/filter
+    const [userSearch, setUserSearch] = useState('');
+    const [logFilter, setLogFilter] = useState('all');
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -375,7 +379,19 @@ export default function AdminDashboard() {
     return (
         <div style={styles.container}>
             <div style={styles.header}>
-                <h1 style={styles.title}>🛡️ Admin Dashboard</h1>
+                <h1 style={{ ...styles.title, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                        width: '32px', height: '32px',
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                        borderRadius: '8px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                        </svg>
+                    </div>
+                    Admin Dashboard
+                </h1>
                 <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
             </div>
 
@@ -405,13 +421,28 @@ export default function AdminDashboard() {
                     style={{ ...styles.tab, ...(activeTab === 'users' ? styles.tabActive : styles.tabInactive) }}
                     onClick={() => setActiveTab('users')}
                 >
-                    👥 Users Database
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        Users Database
+                    </span>
                 </button>
                 <button
                     style={{ ...styles.tab, ...(activeTab === 'logs' ? styles.tabActive : styles.tabInactive) }}
                     onClick={() => setActiveTab('logs')}
                 >
-                    📊 All Analysis Logs
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                        All Analysis Logs
+                    </span>
                 </button>
             </div>
 
@@ -420,6 +451,20 @@ export default function AdminDashboard() {
 
             {!loading && !error && activeTab === 'users' && (
                 <div style={styles.tableWrapper}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}>
+                        <div style={{ position: 'relative', maxWidth: '300px' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input
+                                style={{ ...styles.input, paddingLeft: '36px', marginBottom: 0 }}
+                                placeholder="Search users by name or email..."
+                                value={userSearch}
+                                onChange={(e) => setUserSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
                     <table style={styles.table}>
                         <thead>
                             <tr>
@@ -432,7 +477,10 @@ export default function AdminDashboard() {
                             </tr>
                         </thead>
                         <tbody>
-                            {users.map((user, i) => (
+                            {users.filter(user =>
+                                user.username.toLowerCase().includes(userSearch.toLowerCase()) ||
+                                (user.email && user.email.toLowerCase().includes(userSearch.toLowerCase()))
+                            ).map((user, i) => (
                                 <tr
                                     key={i}
                                     style={styles.tr}
@@ -460,18 +508,28 @@ export default function AdminDashboard() {
                                         <span style={{ color: '#888' }}>({user.total_analyses})</span>
                                     </td>
                                     <td style={styles.td}>
-                                        <button
-                                            style={styles.editBtn}
-                                            onClick={(e) => { e.stopPropagation(); openEditModal(user); }}
-                                        >
-                                            ✏️ Edit
-                                        </button>
-                                        <button
-                                            style={{ ...styles.editBtn, marginLeft: '8px' }}
-                                            onClick={(e) => { e.stopPropagation(); setSelectedUser(user); }}
-                                        >
-                                            👁️ View
-                                        </button>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <button
+                                                style={{ ...styles.editBtn, display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                onClick={(e) => { e.stopPropagation(); openEditModal(user); }}
+                                            >
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                </svg>
+                                                Edit
+                                            </button>
+                                            <button
+                                                style={{ ...styles.editBtn, display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                onClick={(e) => { e.stopPropagation(); setSelectedUser(user); }}
+                                            >
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                                    <circle cx="12" cy="12" r="3" />
+                                                </svg>
+                                                View
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -482,6 +540,30 @@ export default function AdminDashboard() {
 
             {!loading && !error && activeTab === 'logs' && (
                 <div style={styles.tableWrapper}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', color: '#888', fontWeight: '500' }}>Filter:</span>
+                        {['all', 'real', 'fake'].map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setLogFilter(f)}
+                                style={{
+                                    border: 'none',
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    background: logFilter === f ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                                    color: logFilter === f ? '#6ba3ff' : '#888',
+                                    border: logFilter === f ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
+                                    textTransform: 'capitalize',
+                                    fontWeight: logFilter === f ? '600' : '500',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {f}
+                            </button>
+                        ))}
+                    </div>
                     <table style={styles.table}>
                         <thead>
                             <tr>
@@ -494,7 +576,11 @@ export default function AdminDashboard() {
                             </tr>
                         </thead>
                         <tbody>
-                            {logs.map((log, i) => (
+                            {logs.filter(log => {
+                                if (logFilter === 'real') return log.is_real;
+                                if (logFilter === 'fake') return !log.is_real;
+                                return true;
+                            }).map((log, i) => (
                                 <tr
                                     key={i}
                                     style={styles.tr}
@@ -535,7 +621,13 @@ export default function AdminDashboard() {
                 <div style={styles.modalOverlay} onClick={() => setEditUser(null)}>
                     <div style={{ ...styles.modal, maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
                         <div style={styles.modalHeader}>
-                            <h2 style={styles.modalTitle}>✏️ Edit User: {editUser.username}</h2>
+                            <h2 style={{ ...styles.modalTitle, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                                Edit User: {editUser.username}
+                            </h2>
                             <button style={styles.closeBtn} onClick={() => setEditUser(null)}>×</button>
                         </div>
                         <div style={styles.modalBody}>
@@ -598,18 +690,31 @@ export default function AdminDashboard() {
                                     </p>
                                 )}
 
-                                <button type="submit" style={styles.saveBtn} disabled={saving}>
-                                    {saving ? 'Saving...' : '💾 Save Changes'}
+                                <button type="submit" style={{ ...styles.saveBtn, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} disabled={saving}>
+                                    {saving ? 'Saving...' : (
+                                        <>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                                                <polyline points="17 21 17 13 7 13 7 21" />
+                                                <polyline points="7 3 7 8 15 8" />
+                                            </svg>
+                                            Save Changes
+                                        </>
+                                    )}
                                 </button>
 
                                 {editUser.id !== parseInt(localStorage.getItem('user_id')) && (
                                     <button
                                         type="button"
-                                        style={styles.deleteBtn}
+                                        style={{ ...styles.deleteBtn, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                         onClick={handleDeleteUser}
                                         disabled={saving}
                                     >
-                                        🗑️ Delete User
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                        </svg>
+                                        Delete User
                                     </button>
                                 )}
                             </form>
@@ -623,7 +728,13 @@ export default function AdminDashboard() {
                 <div style={styles.modalOverlay} onClick={() => setSelectedUser(null)}>
                     <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
                         <div style={styles.modalHeader}>
-                            <h2 style={styles.modalTitle}>👤 User Details: {selectedUser.username}</h2>
+                            <h2 style={{ ...styles.modalTitle, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                                User Details: {selectedUser.username}
+                            </h2>
                             <button style={styles.closeBtn} onClick={() => setSelectedUser(null)}>×</button>
                         </div>
                         <div style={styles.modalBody}>
@@ -687,7 +798,14 @@ export default function AdminDashboard() {
                 <div style={styles.modalOverlay} onClick={() => setSelectedLog(null)}>
                     <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
                         <div style={styles.modalHeader}>
-                            <h2 style={styles.modalTitle}>📊 Analysis Details</h2>
+                            <h2 style={{ ...styles.modalTitle, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="20" x2="18" y2="10" />
+                                    <line x1="12" y1="20" x2="12" y2="4" />
+                                    <line x1="6" y1="20" x2="6" y2="14" />
+                                </svg>
+                                Analysis Details
+                            </h2>
                             <button style={styles.closeBtn} onClick={() => setSelectedLog(null)}>×</button>
                         </div>
                         <div style={styles.modalBody}>
@@ -707,8 +825,24 @@ export default function AdminDashboard() {
                                     </div>
                                     <div style={{ marginBottom: '16px' }}>
                                         <div style={{ fontSize: '12px', color: '#888' }}>Result</div>
-                                        <div style={{ fontSize: '24px', fontWeight: '700', color: selectedLog.is_real ? '#34d399' : '#fb923c' }}>
-                                            {selectedLog.is_real ? '✓ Authentic' : '⚠ AI-Generated'}
+                                        <div style={{ fontSize: '24px', fontWeight: '700', color: selectedLog.is_real ? '#34d399' : '#fb923c', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            {selectedLog.is_real ? (
+                                                <>
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                        <polyline points="20 6 9 17 4 12" />
+                                                    </svg>
+                                                    Authentic
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                                        <line x1="12" y1="9" x2="12" y2="13" />
+                                                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                                                    </svg>
+                                                    AI-Generated
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -726,7 +860,13 @@ export default function AdminDashboard() {
 
                             {selectedLog.explanation_image && (
                                 <div style={{ marginTop: '24px' }}>
-                                    <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>🔍 XAI Visualization</div>
+                                    <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6ba3ff" strokeWidth="2">
+                                            <circle cx="11" cy="11" r="8" />
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                        </svg>
+                                        XAI Visualization
+                                    </div>
                                     <img
                                         src={`data:image/png;base64,${selectedLog.explanation_image}`}
                                         alt="XAI"
@@ -737,7 +877,12 @@ export default function AdminDashboard() {
 
                             {selectedLog.explanation_text && (
                                 <div style={{ marginTop: '20px', padding: '16px', background: '#0d0d10', borderRadius: '12px' }}>
-                                    <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#6ba3ff' }}>💡 AI Explanation</div>
+                                    <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#6ba3ff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                        </svg>
+                                        AI Explanation
+                                    </div>
                                     <p style={{ color: '#e0e0e8', lineHeight: '1.6', margin: 0 }}>{selectedLog.explanation_text}</p>
                                 </div>
                             )}

@@ -9,9 +9,12 @@ urlpatterns = [
     # API endpoints
     path('api/login', views.login_api, name='login_api'),
     path('api/register', views.register_api, name='register_api'),
+    path('api/check-availability', views.check_availability_api, name='check_availability_api'),
     path('api/logout', views.logout_api, name='logout_api'),
     path('api/reset-password', views.reset_password_api, name='reset_password_api'),
     path('api/history', views.history_api, name='history_api'),
+    path('api/history/clear', views.clear_history_api, name='clear_history_api'),
+    path('api/profile', views.profile_api, name='profile_api'),
     path('api/predict', views.predict_api, name='predict_api'),
     
     # Admin API endpoints
