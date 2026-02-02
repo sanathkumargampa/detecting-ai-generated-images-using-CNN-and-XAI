@@ -133,13 +133,14 @@ export default function Dashboard() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'transparent',
-            position: 'absolute',
+            background: 'rgba(10, 10, 12, 0.8)',
+            backdropFilter: 'blur(12px)',
+            position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
-            zIndex: 100,
-            // Removed border and shadow for cleaner split-view
+            zIndex: 1000,
+            borderBottom: '1px solid rgba(255,255,255,0.03)'
         },
         logo: {
             display: 'flex',
