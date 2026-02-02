@@ -145,10 +145,11 @@ export default function Dashboard() {
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            color: '#e0e0e8',
-            fontSize: '18px',
-            fontWeight: '600',
-            letterSpacing: '-0.01em'
+            color: '#fff', // Whiter text
+            fontSize: '32px', // Bigger text
+            fontWeight: '800', // Bolder
+            letterSpacing: '-0.02em',
+            cursor: 'pointer'
         },
         mainContent: {
             maxWidth: '1400px',
@@ -528,24 +529,8 @@ export default function Dashboard() {
         <div style={styles.container}>
             {/* Minimal Sticky Nav */}
             <nav style={styles.nav}>
-                <div style={styles.logo}>
-                    <div style={{
-                        width: '32px',
-                        height: '32px',
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                    }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
-                        </svg>
-                    </div>
-                    <span>VeriAI</span>
+                <div style={styles.logo} onClick={() => window.location.reload()}>
+                    VeriAI
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
