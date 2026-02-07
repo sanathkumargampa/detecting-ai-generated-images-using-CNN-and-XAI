@@ -19,7 +19,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Avg
 
-from tensorflow.keras.models import load_model, Model
+from keras.models import load_model, Model
 from lime import lime_image
 from skimage.segmentation import mark_boundaries
 
