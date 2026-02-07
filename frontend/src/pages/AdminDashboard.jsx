@@ -24,6 +24,20 @@ export default function AdminDashboard() {
         fetchData();
     }, []);
 
+    // Handle ESC key to close modals
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                if (editUser) setEditUser(null);
+                else if (selectedUser) setSelectedUser(null);
+                else if (selectedLog) setSelectedLog(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [editUser, selectedUser, selectedLog]);
+
     const fetchData = async () => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
