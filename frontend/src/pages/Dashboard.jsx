@@ -11,7 +11,11 @@ export default function Dashboard() {
     const [isDragging, setIsDragging] = useState(false);
     const [analysisStage, setAnalysisStage] = useState(''); // 'processing', 'generating', 'complete'
     const [showResult, setShowResult] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
+    const [cameraStream, setCameraStream] = useState(null);
     const fileInputRef = useRef(null);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
     const navigate = useNavigate();
 
     const handleFileSelect = (file) => {
@@ -90,6 +94,86 @@ export default function Dashboard() {
         const file = e.target.files[0];
         handleFileSelect(file);
     };
+
+    // Camera functionality
+    const openCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+            setCameraStream(stream);
+            setShowCamera(true);
+            setError('');
+        } catch (err) {
+            setError('Unable to access camera. Please check permissions.');
+        }
+    };
+
+    const closeCamera = () => {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            setCameraStream(null);
+        }
+        setShowCamera(false);
+    };
+
+    const capturePhoto = () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                    closeCamera();
+                    handleFileSelect(file);
+                }
+            }, 'image/jpeg', 0.9);
+        }
+    };
+
+    // Set video stream when camera opens
+    useEffect(() => {
+        if (showCamera && cameraStream && videoRef.current) {
+            videoRef.current.srcObject = cameraStream;
+        }
+    }, [showCamera, cameraStream]);
+
+    // Keyboard shortcuts for camera (Space to capture, Escape to close)
+    useEffect(() => {
+        const handleCameraKeydown = (event) => {
+            if (!showCamera) return;
+
+            if (event.code === 'Space') {
+                event.preventDefault();
+                capturePhoto();
+            } else if (event.code === 'Escape') {
+                event.preventDefault();
+                closeCamera();
+            }
+        };
+
+        if (showCamera) {
+            window.addEventListener('keydown', handleCameraKeydown);
+        }
+
+        return () => {
+            window.removeEventListener('keydown', handleCameraKeydown);
+        };
+    }, [showCamera, cameraStream]);
+
+    // Cleanup camera on unmount
+    useEffect(() => {
+        return () => {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [cameraStream]);
 
     const handleReset = () => {
         setSelectedFile(null);
@@ -569,7 +653,7 @@ export default function Dashboard() {
                             <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" strokeLinecap="round" strokeLinejoin="round" />
                             <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        Settings
+                        Profile
                     </button>
 
                     <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 12px' }}></div>
@@ -676,6 +760,45 @@ export default function Dashboard() {
                                     style={{ display: 'none' }}
                                 />
                             </div>
+
+                            {/* Camera Capture Option */}
+                            <div style={{ marginTop: '24px', textAlign: 'center' }}>
+                                <p style={{ color: '#6b6b78', fontSize: '13px', marginBottom: '16px' }}>or</p>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        openCamera();
+                                    }}
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)',
+                                        border: '1px solid rgba(107, 163, 255, 0.3)',
+                                        borderRadius: '16px',
+                                        padding: '16px 32px',
+                                        color: '#6ba3ff',
+                                        fontSize: '15px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s ease',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '12px'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(107, 163, 255, 0.25) 0%, rgba(107, 163, 255, 0.1) 100%)';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(107, 163, 255, 0.15) 0%, rgba(107, 163, 255, 0.05) 100%)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
+                                >
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
+                                        <circle cx="12" cy="13" r="4" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    Capture with Camera
+                                </button>
+                            </div>
                         </div>
                     )}
                     {preview && (
@@ -767,8 +890,35 @@ export default function Dashboard() {
                                         </div>
                                     </div>
 
+                                    {/* XAI Output */}
+                                    {result.image && (
+                                        <div style={styles.xaiContainer}>
+                                            <div style={styles.xaiHeader}>
+                                                <div style={styles.xaiIcon}>
+                                                    <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </div>
+                                                <h3 style={styles.xaiTitleText}>Visual Explanation (XAI)</h3>
+                                            </div>
+
+                                            <img
+                                                src={`data:image/png;base64,${result.image}`}
+                                                alt="XAI LIME Visualization"
+                                                style={styles.xaiImage}
+                                            />
+
+                                            <p style={styles.xaiExplanation}>
+                                                {result.explanation || (result.isReal
+                                                    ? "The model identified consistent high-frequency texture details and natural lighting physics, which are strong indicators of a camera-captured image."
+                                                    : "The model detected tell-tale signs of synthesis, such as unnatural smoothness, lack of fine grain, or structural inconsistencies common in generative models."
+                                                )}
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {/* Advanced Analysis Section */}
-                                    <div style={styles.advancedContainer}>
+                                    <div style={{ ...styles.advancedContainer, marginTop: '32px' }}>
                                         <div style={styles.advancedTitle}>
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ba3ff" strokeWidth="2">
                                                 <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" strokeLinecap="round" strokeLinejoin="round" />
@@ -810,37 +960,32 @@ export default function Dashboard() {
                                             </div>
                                         </div>
 
-                                        <p style={{ marginTop: '20px', fontSize: '12px', color: '#70707a', lineHeight: '1.5' }}>
-                                            * Probabilities indicate the model's confidence distribution. The dominant class determines the final verdict. Analysis considers frequency patterns, noise distribution, and compression artifacts.
+                                        <p style={{ marginTop: '20px', fontSize: '12px', color: '#70707a', lineHeight: '1.6' }}>
+                                            {result.isReal ? (
+                                                // Explanations for Real images - based on fake_prob level
+                                                (result.fake_prob || 0) > 30 ? (
+                                                    <span>The artificial probability suggests noticeable digital manipulation, heavy post-processing, or significant compression artifacts. The image may have undergone extensive editing while remaining authentic.</span>
+                                                ) : (result.fake_prob || 0) > 15 ? (
+                                                    <span>The artificial probability indicates moderate digital processing artifacts, color corrections, or filter applications commonly found in professionally edited photographs.</span>
+                                                ) : (result.fake_prob || 0) > 5 ? (
+                                                    <span>The artificial probability reflects minor compression signatures or subtle post-processing typical of standard photo workflows.</span>
+                                                ) : (
+                                                    <span>Minimal artificial signatures detected, indicating an unaltered or minimally processed authentic photograph.</span>
+                                                )
+                                            ) : (
+                                                // Explanations for AI-Generated images - based on real_prob level
+                                                (result.real_prob || 0) > 30 ? (
+                                                    <span>The authentic probability suggests the AI model produced highly realistic textures and lighting. Advanced generation techniques may have been employed.</span>
+                                                ) : (result.real_prob || 0) > 15 ? (
+                                                    <span>The authentic probability indicates the AI model successfully replicated certain natural image characteristics such as realistic lighting or texture patterns.</span>
+                                                ) : (result.real_prob || 0) > 5 ? (
+                                                    <span>The authentic probability reflects some natural-looking elements, though synthetic patterns remain the dominant characteristic.</span>
+                                                ) : (
+                                                    <span>Very few authentic characteristics detected, indicating a clearly synthetic generation with visible artificial patterns.</span>
+                                                )
+                                            )}
                                         </p>
                                     </div>
-
-                                    {/* XAI Output */}
-                                    {result.image && (
-                                        <div style={styles.xaiContainer}>
-                                            <div style={styles.xaiHeader}>
-                                                <div style={styles.xaiIcon}>
-                                                    <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" strokeLinecap="round" strokeLinejoin="round" />
-                                                    </svg>
-                                                </div>
-                                                <h3 style={styles.xaiTitleText}>Visual Explanation (XAI)</h3>
-                                            </div>
-
-                                            <img
-                                                src={`data:image/png;base64,${result.image}`}
-                                                alt="XAI LIME Visualization"
-                                                style={styles.xaiImage}
-                                            />
-
-                                            <p style={styles.xaiExplanation}>
-                                                {result.explanation || (result.isReal
-                                                    ? "The model identified consistent high-frequency texture details and natural lighting physics, which are strong indicators of a camera-captured image."
-                                                    : "The model detected tell-tale signs of synthesis, such as unnatural smoothness, lack of fine grain, or structural inconsistencies common in generative models."
-                                                )}
-                                            </p>
-                                        </div>
-                                    )}
 
                                     {/* Start New Analysis Button */}
                                     <button
@@ -873,6 +1018,143 @@ export default function Dashboard() {
                     )}
                 </div> {/* Close Right Panel */}
             </div>
+
+            {/* Camera Modal */}
+            {showCamera && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.9)',
+                    zIndex: 2000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px'
+                }}>
+                    {/* Close Button */}
+                    <button
+                        onClick={closeCamera}
+                        style={{
+                            position: 'absolute',
+                            top: '24px',
+                            right: '24px',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '48px',
+                            height: '48px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#fff',
+                            transition: 'background 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.6)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
+
+                    {/* Camera Title */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        marginBottom: '24px'
+                    }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            background: 'linear-gradient(135deg, rgba(107, 163, 255, 0.2) 0%, rgba(107, 163, 255, 0.05) 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ba3ff" strokeWidth="2">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
+                                <circle cx="12" cy="13" r="4" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </div>
+                        <h2 style={{
+                            color: '#fff',
+                            fontSize: '22px',
+                            fontWeight: '600',
+                            margin: 0
+                        }}>
+                            Camera Capture
+                        </h2>
+                    </div>
+
+                    {/* Video Preview */}
+                    <div style={{
+                        position: 'relative',
+                        borderRadius: '24px',
+                        overflow: 'hidden',
+                        border: '3px solid rgba(107, 163, 255, 0.5)',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+                    }}>
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '60vh',
+                                borderRadius: '20px',
+                                display: 'block'
+                            }}
+                        />
+                    </div>
+
+                    {/* Hidden Canvas for Capture */}
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+                    {/* Capture Button */}
+                    <button
+                        onClick={capturePhoto}
+                        style={{
+                            marginTop: '32px',
+                            background: 'linear-gradient(135deg, #6ba3ff 0%, #4a90ff 100%)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '72px',
+                            height: '72px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#fff',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 8px 32px rgba(107, 163, 255, 0.4)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                            e.currentTarget.style.boxShadow = '0 12px 40px rgba(107, 163, 255, 0.6)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = '0 8px 32px rgba(107, 163, 255, 0.4)';
+                        }}
+                    >
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                        </svg>
+                    </button>
+
+                    <p style={{ color: '#90909a', marginTop: '16px', fontSize: '14px' }}>
+                        Click the button to capture
+                    </p>
+                </div>
+            )}
 
             {/* CSS Animations */}
             <style>{`
